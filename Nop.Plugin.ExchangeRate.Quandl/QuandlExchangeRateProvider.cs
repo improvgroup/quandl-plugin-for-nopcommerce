@@ -170,7 +170,39 @@ namespace Nop.Plugin.ExchangeRate.Quandl
                     }
                 default: return string.Empty;
             }
-            
+        }
+
+        /// <summary>
+        /// For some of currencies Quandl service returns a reversed rate, check whether the passed currency is in this list
+        /// </summary>
+        /// <param name="exchangeCurrencyCode">Primary exchange rate currency code</param>
+        /// <param name="currencyCode">Current currency code</param>
+        /// <returns>True if need to reverse; otherwise false</returns>
+        protected bool NeedToReverse(string exchangeCurrencyCode, string currencyCode)
+        {
+            switch (exchangeCurrencyCode.ToLowerInvariant())
+            {
+                case "usd":
+                    switch (currencyCode.ToLowerInvariant())
+                    {
+                        case "aud":
+                        case "gbp":
+                        case "eur":
+                        case "nzd":
+                            return true;
+                    }
+                    break;
+                case "gbp":
+                    switch (currencyCode.ToLowerInvariant())
+                    {
+                        case "usd":
+                        case "eur":
+                            return true;
+                    }
+                    break;
+            }
+
+            return false;
         }
 
         #endregion
@@ -233,6 +265,10 @@ namespace Nop.Plugin.ExchangeRate.Quandl
                         DateTime date;
                         if (string.IsNullOrEmpty(rateData[1]) || !decimal.TryParse(rateData[1], out rate) || !DateTime.TryParse(rateData[0], out date))
                             continue;
+
+                        //to reverse rate if necessary
+                        if (NeedToReverse(exchangeCurrencyCode, currency.CurrencyCode))
+                            rate = Math.Round(1 / rate, 4);
 
                         rates.Add(new Core.Domain.Directory.ExchangeRate
                         {
