@@ -40,7 +40,7 @@ namespace Nop.Plugin.ExchangeRate.Quandl.Controllers
                 ApiKey = _quandlSettings.ApiKey
             };
 
-            return View("~/Plugins/ExchangeRate.Quandl/Views/Quandl/Configure.cshtml", model);
+            return View("~/Plugins/ExchangeRate.Quandl/Views/Configure.cshtml", model);
         }
 
         [HttpPost]
