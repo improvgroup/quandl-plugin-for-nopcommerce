@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Web.Routing;
 using Newtonsoft.Json;
 using Nop.Core;
 using Nop.Core.Plugins;
@@ -24,6 +23,7 @@ namespace Nop.Plugin.ExchangeRate.Quandl
         private readonly ILogger _logger; 
         private readonly ISettingService _settingService;
         private readonly QuandlSettings _quandlSettings;
+        private readonly IWebHelper _webHelper;
 
         #endregion
 
@@ -32,12 +32,14 @@ namespace Nop.Plugin.ExchangeRate.Quandl
         public QuandlExchangeRateProvider(ICurrencyService currencyService,
             ILogger logger,
             ISettingService settingService,
-            QuandlSettings quandlSettings)
+            QuandlSettings quandlSettings,
+            IWebHelper webHelper)
         {
             this._currencyService = currencyService;
             this._logger = logger;
             this._settingService = settingService;
             this._quandlSettings = quandlSettings;
+            this._webHelper = webHelper;
         }
 
         #endregion
@@ -212,7 +214,7 @@ namespace Nop.Plugin.ExchangeRate.Quandl
         /// <summary>
         /// Gets currency live rates
         /// </summary>
-        /// <param name="currencyCode">Exchange rate currency code</param>
+        /// <param name="exchangeCurrencyCode">Exchange rate currency code</param>
         /// <returns>Exchange rates</returns>
         public IList<Core.Domain.Directory.ExchangeRate> GetCurrencyLiveRates(string exchangeCurrencyCode)
         {
@@ -241,8 +243,7 @@ namespace Nop.Plugin.ExchangeRate.Quandl
                 }
 
                 //request to Quandl service
-                var serviceUrl = string.Format("https://www.quandl.com/api/v3/datasets/{0}/{1}.json?limit=1&api_key={2}",
-                    GetDatabaseCode(exchangeCurrencyCode), GetDatasetCode(exchangeCurrencyCode, currency.CurrencyCode), _quandlSettings.ApiKey);
+                var serviceUrl = $"https://www.quandl.com/api/v3/datasets/{GetDatabaseCode(exchangeCurrencyCode)}/{GetDatasetCode(exchangeCurrencyCode, currency.CurrencyCode)}.json?limit=1&api_key={_quandlSettings.ApiKey}";
                 var request = (HttpWebRequest)WebRequest.Create(serviceUrl);
                 request.Method = "GET";
                 request.ContentType = "application/json";
@@ -254,16 +255,12 @@ namespace Nop.Plugin.ExchangeRate.Quandl
                     {
                         var body = streamReader.ReadToEnd();
                         var response = JsonConvert.DeserializeObject<QuandlResponse>(body);
-                        if (response == null || response.Dataset == null || response.Dataset.Data == null)
-                            continue;
 
-                        var rateData = response.Dataset.Data.FirstOrDefault();
+                        var rateData = response?.Dataset?.Data?.FirstOrDefault();
                         if (rateData == null)
                             continue;
 
-                        decimal rate;
-                        DateTime date;
-                        if (string.IsNullOrEmpty(rateData[1]) || !decimal.TryParse(rateData[1], out rate) || !DateTime.TryParse(rateData[0], out date))
+                        if (string.IsNullOrEmpty(rateData[1]) || !decimal.TryParse(rateData[1], out decimal rate) || !DateTime.TryParse(rateData[0], out DateTime date))
                             continue;
 
                         //to reverse rate if necessary
@@ -283,7 +280,8 @@ namespace Nop.Plugin.ExchangeRate.Quandl
                     var httpResponse = (HttpWebResponse)ex.Response;
                     using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
                     {
-                        errors.AppendLine(string.Format("Quandl exchange error: for the currency {0} {1}", currency.CurrencyCode, streamReader.ReadToEnd()));
+                        errors.AppendLine(
+                            $"Quandl exchange error: for the currency {currency.CurrencyCode} {streamReader.ReadToEnd()}");
                         continue;
                     }
                 }
@@ -296,17 +294,9 @@ namespace Nop.Plugin.ExchangeRate.Quandl
             return rates;
         }
 
-        /// <summary>
-        /// Gets a route for provider configuration
-        /// </summary>
-        /// <param name="actionName">Action name</param>
-        /// <param name="controllerName">Controller name</param>
-        /// <param name="routeValues">Route values</param>
-        public void GetConfigurationRoute(out string actionName, out string controllerName, out RouteValueDictionary routeValues)
+        public override string GetConfigurationPageUrl()
         {
-            actionName = "Configure";
-            controllerName = "Quandl";
-            routeValues = new RouteValueDictionary { { "Namespaces", "Nop.Plugin.ExchangeRate.Quandl.Controllers" }, { "area", null } };
+            return $"{_webHelper.GetStoreLocation()}Admin/Quandl/Configure";
         }
 
         /// <summary>
