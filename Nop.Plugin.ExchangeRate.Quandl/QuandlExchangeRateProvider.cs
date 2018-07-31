@@ -20,26 +20,29 @@ namespace Nop.Plugin.ExchangeRate.Quandl
         #region Fields
 
         private readonly ICurrencyService _currencyService;
-        private readonly ILogger _logger; 
+        private readonly ILocalizationService _localizationService;
+        private readonly ILogger _logger;
         private readonly ISettingService _settingService;
-        private readonly QuandlSettings _quandlSettings;
         private readonly IWebHelper _webHelper;
+        private readonly QuandlSettings _quandlSettings;
 
         #endregion
 
         #region Ctor
 
         public QuandlExchangeRateProvider(ICurrencyService currencyService,
+            ILocalizationService localizationService,
             ILogger logger,
             ISettingService settingService,
-            QuandlSettings quandlSettings,
-            IWebHelper webHelper)
+            IWebHelper webHelper,
+            QuandlSettings quandlSettings)
         {
             this._currencyService = currencyService;
+            this._localizationService = localizationService;
             this._logger = logger;
             this._settingService = settingService;
-            this._quandlSettings = quandlSettings;
             this._webHelper = webHelper;
+            this._quandlSettings = quandlSettings;
         }
 
         #endregion
@@ -308,8 +311,8 @@ namespace Nop.Plugin.ExchangeRate.Quandl
             _settingService.SaveSetting(new QuandlSettings());
 
             //locales
-            this.AddOrUpdatePluginLocaleResource("Plugins.ExchangeRate.Quandl.Fields.ApiKey", "API key");
-            this.AddOrUpdatePluginLocaleResource("Plugins.ExchangeRate.Quandl.Fields.ApiKey.Hint", "Specify API key.");
+            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.ExchangeRate.Quandl.Fields.ApiKey", "API key");
+            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.ExchangeRate.Quandl.Fields.ApiKey.Hint", "Specify API key.");
 
             base.Install();
         }
@@ -323,8 +326,8 @@ namespace Nop.Plugin.ExchangeRate.Quandl
             _settingService.DeleteSetting<QuandlSettings>();
 
             //locales
-            this.DeletePluginLocaleResource("Plugins.ExchangeRate.Quandl.Fields.ApiKey");
-            this.DeletePluginLocaleResource("Plugins.ExchangeRate.Quandl.Fields.ApiKey.Hint");
+            _localizationService.DeletePluginLocaleResource("Plugins.ExchangeRate.Quandl.Fields.ApiKey");
+            _localizationService.DeletePluginLocaleResource("Plugins.ExchangeRate.Quandl.Fields.ApiKey.Hint");
 
             base.Uninstall();
         }
